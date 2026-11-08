@@ -28,7 +28,15 @@ const boundsNivel9: Bounds = [-45.7031, -22.5937, -45.0000, -21.9430];
 const boundsNivel8: Bounds = [-46.4062, -23.2413, -45.0000, -21.9430];
 const mds = derivado("mds", "Modelo Digital de Superfície", "dsm", "mds", boundsNivel9, 9, 18);
 const mdt = derivado("mdt", "Modelo Digital de Terreno", "dtm", "mdt", boundsNivel8, 8, 17);
-const declividade = derivado("declividade", "Declividade (IBGE)", "slope", "decli", boundsNivel9, 9, 18);
+// Declividade: legenda em imagem (public/legends), não desenhada no raster.
+const declividade: Layer = {
+  ...derivado("declividade", "Declividade (IBGE)", "slope", "decli", boundsNivel9, 9, 18),
+  legendMode: "external",
+  legend: {
+    type: "image", title: "Declividade (IBGE)", imageUrl: "/legends/declividade-ibge.png",
+    imageAlt: "Classes de declividade do IBGE: plano, suave ondulado, ondulado, forte ondulado, montanhoso e escarpado",
+  },
+};
 const aspecto = derivado("aspecto", "Orientação de Vertentes", "aspect", "aspect", boundsNivel8, 8, 17);
 
 // Modelo 3D do ion (Agisoft Metashape). VITE_CESIUM_3D_TOKEN é igual ao token
