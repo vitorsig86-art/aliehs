@@ -17,11 +17,11 @@ const orto: Layer = {
     bounds: [-45.5273, -22.5937, -45.1758, -22.4313], minimumLevel: 11, maximumLevel: 20, tileWidth: 256, tileHeight: 256 },
 };
 
-// Relevo regional: seção Análise Macro (primeiro item), fora dos grupos exclusivos.
+// Relevo regional: seção Análise Macro (Relevo e Hidrologia), fora dos grupos exclusivos.
 // No mapa fica acima do ortomosaico e abaixo dos rasters do drone.
 const demMacro: Layer = {
-  id: "dem-macro", name: "Relevo Regional (DEM)", description: "", kind: "dtm", defaultVisible: false,
-  group: "macro", panelOrder: 0, legendMode: "embedded", opacityControl: true,
+  id: "dem-macro", name: "Modelo de Elevação ANADEM", description: "", kind: "dtm", defaultVisible: false,
+  group: "macro", subsection: "Relevo e Hidrologia", panelOrder: 8, legendMode: "embedded", opacityControl: true,
   source: { format: "tms", url: `${R2}/dem_macro/{z}/{x}/{reverseY}.png`, credit: "Cardeal Map",
     bounds: [-67.5000, -40.9799, -45.0000, -21.9430], minimumLevel: 4, maximumLevel: 13, tileWidth: 256, tileHeight: 256 },
 };
@@ -103,22 +103,29 @@ const drenagem: Layer = {
 };
 
 // Análise Macro: contexto regional (IBGE, ICMBio, ANA) e derivados da bacia.
-// panelOrder ordena a seção; no array, a ordem segue o zIndex.
+// Subseções no padrão de Andrelândia; panel = subseção + posição (panelOrder
+// ordena a seção inteira, e o título da subseção aparece quando ela muda).
+// No array, a ordem segue o zIndex.
+const TERRITORIAL = "Contexto Territorial";
+const MEIO_FISICO = "Meio Físico";
+const RELEVO = "Relevo e Hidrologia";
+type MacroPanel = { subsection: string; panelOrder: number };
+const at = (subsection: string, panelOrder: number): MacroPanel => ({ subsection, panelOrder });
 type GeoJsonSource = Extract<Layer["source"], { format: "geojson" }>;
 type PopupField = NonNullable<GeoJsonSource["popup"]>["fields"][number];
-const macro = (id: string, name: string, kind: Layer["kind"], file: string, panelOrder: number,
+const macro = (id: string, name: string, kind: Layer["kind"], file: string, panel: MacroPanel,
   style: NonNullable<GeoJsonSource["style"]>, popup: GeoJsonSource["popup"], extra: Partial<Layer> = {}): Layer => ({
-  id, name, description: "", kind, defaultVisible: false, group: "macro", panelOrder, ...extra,
+  id, name, description: "", kind, defaultVisible: false, group: "macro", ...panel, ...extra,
   source: { format: "geojson", url: `${GEOJSON}/${file}`, autoZoom: false, style: { ...style, clampToGround: true }, popup },
 });
 // Temas regionais: um por vez, contorno na cor do preenchimento.
-const tema = (id: string, name: string, file: string, panelOrder: number, color: string, fillOpacity: number,
+const tema = (id: string, name: string, file: string, panel: MacroPanel, color: string, fillOpacity: number,
   fields: PopupField[], options: { strokeWidth?: number; classification?: NonNullable<GeoJsonSource["style"]>["classification"] } = {}): Layer =>
-  macro(id, name, "vector", file, panelOrder,
+  macro(id, name, "vector", file, panel,
     { stroke: color, strokeWidth: options.strokeWidth ?? 2, fill: color, fillOpacity, zIndex: 2, classification: options.classification },
     { titleProperty: "nome", fields }, { exclusiveGroup: "macro-tema", opacityControl: true });
 
-const municipios = macro("municipios", "Limites Municipais", "vector", "municipios.geojson", 1,
+const municipios = macro("municipios", "Contexto Municipal IBGE", "vector", "municipios.geojson", at(TERRITORIAL, 1),
   { stroke: "#FFFFFF", strokeWidth: 2, fillOpacity: 0, zIndex: 18 },
   { titleProperty: "nome", fields: [
     { property: "area_ha", label: "Área", format: "integer", suffix: " ha" },
@@ -126,22 +133,22 @@ const municipios = macro("municipios", "Limites Municipais", "vector", "municipi
     { property: "pop_rural", label: "População rural", format: "integer" },
     { property: "tipologia", label: "Tipologia IBGE" },
   ] });
-const ottobacia = macro("ottobacia", "Ottobacia (ANA)", "vector", "limite_microbacia_ana.geojson", 2,
+const ottobacia = macro("ottobacia", "Microbacias ANA", "vector", "limite_microbacia_ana.geojson", at(RELEVO, 10),
   { stroke: "#00BCD4", strokeWidth: 2.5, fillOpacity: 0, zIndex: 17 },
   { titleProperty: "nome", fields: [{ property: "area_km2", label: "Área", decimals: 2, suffix: " km²" }] });
-const ucfed = tema("ucfed", "Unidade de Conservação Federal", "ucfed.geojson", 3, "#2E7D32", 0.12, [
+const ucfed = tema("ucfed", "Unidade de Conservação ICMBio", "ucfed.geojson", at(TERRITORIAL, 3), "#2E7D32", 0.12, [
   { property: "categoria", label: "Categoria" },
   { property: "esfera", label: "Esfera" },
   { property: "criacao", label: "Ato de criação" },
   { property: "area_ha", label: "Área total", format: "integer", suffix: " ha" },
   { property: "gestao", label: "Gestão" },
 ], { strokeWidth: 3 });
-const clima = tema("clima", "Clima (IBGE)", "clima_ibge.geojson", 4, "#7FB3D5", 0.3, [
+const clima = tema("clima", "Clima IBGE", "clima_ibge.geojson", at(TERRITORIAL, 2), "#7FB3D5", 0.3, [
   { property: "umidade", label: "Umidade" },
   { property: "meses_secos", label: "Período seco" },
   { property: "temperatura", label: "Temperatura" },
 ]);
-const geologia = tema("geologia", "Geologia (IBGE)", "geologia_ibge.geojson", 5, "#C49A6C", 0.35, [
+const geologia = tema("geologia", "Geologia IBGE", "geologia_ibge.geojson", at(MEIO_FISICO, 4), "#C49A6C", 0.35, [
   { property: "simbolo", label: "Símbolo" },
   { property: "litologia", label: "Litologia" },
   { property: "idade", label: "Idade" },
@@ -150,36 +157,36 @@ const geologia = tema("geologia", "Geologia (IBGE)", "geologia_ibge.geojson", 5,
   0: { fill: "#C49A6C", stroke: "#C49A6C" },
   1: { fill: "#D35400", stroke: "#D35400" },
 } } });
-const geomorfologia = tema("geomorfologia", "Geomorfologia (IBGE)", "geomorfologia_ibge.geojson", 6, "#A9746E", 0.3, [
+const geomorfologia = tema("geomorfologia", "Geomorfologia IBGE", "geomorfologia_ibge.geojson", at(MEIO_FISICO, 5), "#A9746E", 0.3, [
   { property: "dominio", label: "Domínio" },
   { property: "regiao", label: "Região" },
   { property: "compartimento", label: "Compartimento" },
   { property: "modelado", label: "Modelado" },
 ]);
-const pedologia = tema("pedologia", "Solos (IBGE)", "pedologia_ibge.geojson", 7, "#C8743A", 0.3, [
+const pedologia = tema("pedologia", "Pedologia IBGE", "pedologia_ibge.geojson", at(MEIO_FISICO, 6), "#C8743A", 0.3, [
   { property: "textura", label: "Textura" },
   { property: "horizonte", label: "Horizonte A" },
   { property: "relevo", label: "Relevo" },
 ]);
-const vegetacao = tema("vegetacao", "Vegetação (IBGE)", "vegetacao_ibge.geojson", 8, "#6AA84F", 0.3, [
+const vegetacao = tema("vegetacao", "Vegetação IBGE", "vegetacao_ibge.geojson", at(MEIO_FISICO, 7), "#6AA84F", 0.3, [
   { property: "uso_dominante", label: "Uso dominante" },
   { property: "contato", label: "Vegetação original" },
   { property: "secundaria", label: "Formações secundárias" },
 ]);
-const drenagemAna = macro("drenagem-ana", "Rios (ANA)", "drainage", "drenagem_ana.geojson", 9,
+const drenagemAna = macro("drenagem-ana", "Drenagem ANA", "drainage", "drenagem_ana.geojson", at(RELEVO, 12),
   { stroke: "#0B2A9E", strokeWidth: 3, zIndex: 14 },
   { title: "Curso d'água (ANA)", fields: [
     { property: "comprimento_km", label: "Comprimento do trecho", decimals: 2, suffix: " km" },
     { property: "area_bacia_km2", label: "Área da bacia", decimals: 2, suffix: " km²" },
   ] });
-const reservatorio = macro("reservatorio", "Reservatório (ANA)", "vector", "reservatorio_ana.geojson", 10,
+const reservatorio = macro("reservatorio", "Reservatório ANA", "vector", "reservatorio_ana.geojson", at(RELEVO, 13),
   { stroke: "#0B2A9E", strokeWidth: 1.5, fill: "#1E88E5", fillOpacity: 0.6, zIndex: 15 },
   { titleProperty: "nome", fields: [
     { property: "uso", label: "Uso" },
     { property: "empreendedor", label: "Empreendedor" },
     { property: "area_ha", label: "Área", decimals: 2, suffix: " ha" },
   ] });
-const drenagemMacro = macro("drenagem-macro", "Drenagem Simulada (bacia)", "drainage", "simu_drenagem.geojson", 11,
+const drenagemMacro = macro("drenagem-macro", "Simulação de drenagem ANADEM", "drainage", "simu_drenagem.geojson", at(RELEVO, 14),
   { stroke: "#00E5FF", strokeWidth: 1, zIndex: 10,
     classification: { property: "STRAHLER", classes: {
       1: { stroke: "#00E5FF", strokeWidth: 1, zIndex: 10 },
@@ -193,10 +200,10 @@ const drenagemMacro = macro("drenagem-macro", "Drenagem Simulada (bacia)", "drai
     { property: "STRAHLER", label: "Ordem de Strahler", format: "integer" },
     { property: "area_contribuicao_ha", label: "Área de contribuição", decimals: 2, suffix: " ha" },
   ] });
-const microbaciasMacro = macro("microbacias-macro", "Microbacias Simuladas (bacia)", "vector", "simu_microbacias.geojson", 12,
+const microbaciasMacro = macro("microbacias-macro", "Microbacias simuladas ANADEM", "vector", "simu_microbacias.geojson", at(RELEVO, 11),
   microbaciasStyle,
   areaPerimetroPopup("nome"), { opacityControl: true });
-const curvas10 = macro("curvas10", "Curvas de Nível (10 m, bacia)", "contours", "curvas_10m.geojson", 13,
+const curvas10 = macro("curvas10", "Curvas de nível 10 m (ANADEM)", "contours", "curvas_10m.geojson", at(RELEVO, 9),
   { stroke: "#000000", strokeWidth: 1, zIndex: 5 },
   { title: "Curva de nível", fields: [{ property: "cota_m", label: "Cota", suffix: " m", format: "integer" }] });
 
