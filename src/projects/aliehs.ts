@@ -42,14 +42,14 @@ export const project: ProjectConfig = {
   // bounds: [W, S, E, N],
   // Opcional: navigation: { marginRatio: 0.25, maximumZoomDistance: 5000 },
   // Capture a vista final (cameraCapture). Ângulos em graus; altura em metros sobre o elipsoide.
-  // Provisória (de cima, ~5000 m); substituir por "Capturar Home".
-  initialCamera: { longitude: -45.28, latitude: -22.51, height: 5000, heading: 0, pitch: -90, roll: 0 },
+  initialCamera: { longitude: -45.3492082, latitude: -22.4824364, height: 1600.2, heading: 181.35, pitch: -27.48, roll: 0 },
   // Ordem = empilhamento: o último item fica por cima.
   // Sem análise temporal: um único ortomosaico, sem temporalCampaign nas camadas
   // e sem temporalComparison (régua, selo de período e "Comparar" ficam ocultos).
   layers: [basemap, orto, mds, mdt, declividade, aspecto],
   scenes: [],
   diagnostic: { steps: [] },
-  // Ferramentas só aparecem em npm run dev; desligue cameraCapture ao finalizar.
-  developmentTools: { modelAlignment: false, cropAuthoring: false, cameraCapture: true },
+  // Ferramentas só aparecem em npm run dev. modelAlignment e cropAuthoring ligados
+  // para o recorte do modelo 3D; desligue os dois ao finalizar (etapa 9).
+  developmentTools: { modelAlignment: true, cropAuthoring: true, cameraCapture: false },
 };
