@@ -55,12 +55,15 @@ const imoveis: Layer = {
 };
 
 // Microbacias: preenchimento e contorno na cor do atributo "cor" (0 a 9).
+const microbaciasStyle = {
+  stroke: "#FFFFFF", strokeWidth: 1.5, fillOpacity: 0.35, clampToGround: true, zIndex: 3,
+  classification: { property: "cor", classes: Object.fromEntries(microbasinColors.map((color, index) => [String(index), { fill: color, stroke: color }])) },
+  outline: { property: "cor", colors: microbasinColors, width: 1.5 },
+};
 const microbacias: Layer = {
   id: "microbacias", name: "Microbacias", description: "", kind: "vector", defaultVisible: false, panelOrder: 2, opacityControl: true,
   source: { format: "geojson", url: `${GEOJSON}/microbacias_1.geojson`, autoZoom: false,
-    style: { stroke: "#FFFFFF", strokeWidth: 1.5, fillOpacity: 0.35, clampToGround: true, zIndex: 3,
-      classification: { property: "cor", classes: Object.fromEntries(microbasinColors.map((color, index) => [String(index), { fill: color, stroke: color }])) },
-      outline: { property: "cor", colors: microbasinColors, width: 1.5 } },
+    style: microbaciasStyle,
     popup: areaPerimetroPopup("nome") },
 };
 
@@ -89,6 +92,104 @@ const drenagem: Layer = {
       { property: "area_contribuicao_ha", label: "Área de contribuição", decimals: 2, suffix: " ha" },
     ] } },
 };
+
+// Análise Macro: contexto regional (IBGE, ICMBio, ANA) e derivados da bacia.
+// panelOrder ordena a seção; no array, a ordem segue o zIndex.
+type GeoJsonSource = Extract<Layer["source"], { format: "geojson" }>;
+type PopupField = NonNullable<GeoJsonSource["popup"]>["fields"][number];
+const macro = (id: string, name: string, kind: Layer["kind"], file: string, panelOrder: number,
+  style: NonNullable<GeoJsonSource["style"]>, popup: GeoJsonSource["popup"], extra: Partial<Layer> = {}): Layer => ({
+  id, name, description: "", kind, defaultVisible: false, group: "macro", panelOrder, ...extra,
+  source: { format: "geojson", url: `${GEOJSON}/${file}`, autoZoom: false, style: { ...style, clampToGround: true }, popup },
+});
+// Temas regionais: um por vez, contorno na cor do preenchimento.
+const tema = (id: string, name: string, file: string, panelOrder: number, color: string, fillOpacity: number,
+  fields: PopupField[], options: { strokeWidth?: number; classification?: NonNullable<GeoJsonSource["style"]>["classification"] } = {}): Layer =>
+  macro(id, name, "vector", file, panelOrder,
+    { stroke: color, strokeWidth: options.strokeWidth ?? 2, fill: color, fillOpacity, zIndex: 2, classification: options.classification },
+    { titleProperty: "nome", fields }, { exclusiveGroup: "macro-tema", opacityControl: true });
+
+const municipios = macro("municipios", "Limites Municipais", "vector", "municipios.geojson", 1,
+  { stroke: "#FFFFFF", strokeWidth: 2, fillOpacity: 0, zIndex: 18 },
+  { titleProperty: "nome", fields: [
+    { property: "area_ha", label: "Área", format: "integer", suffix: " ha" },
+    { property: "pop_total", label: "População", format: "integer" },
+    { property: "pop_rural", label: "População rural", format: "integer" },
+    { property: "tipologia", label: "Tipologia IBGE" },
+  ] });
+const ottobacia = macro("ottobacia", "Ottobacia (ANA)", "vector", "limite_microbacia_ana.geojson", 2,
+  { stroke: "#00BCD4", strokeWidth: 2.5, fillOpacity: 0, zIndex: 17 },
+  { titleProperty: "nome", fields: [{ property: "area_km2", label: "Área", decimals: 2, suffix: " km²" }] });
+const ucfed = tema("ucfed", "Unidade de Conservação Federal", "ucfed.geojson", 3, "#2E7D32", 0.12, [
+  { property: "categoria", label: "Categoria" },
+  { property: "esfera", label: "Esfera" },
+  { property: "criacao", label: "Ato de criação" },
+  { property: "area_ha", label: "Área total", format: "integer", suffix: " ha" },
+  { property: "gestao", label: "Gestão" },
+], { strokeWidth: 3 });
+const clima = tema("clima", "Clima (IBGE)", "clima_ibge.geojson", 4, "#7FB3D5", 0.3, [
+  { property: "umidade", label: "Umidade" },
+  { property: "meses_secos", label: "Período seco" },
+  { property: "temperatura", label: "Temperatura" },
+]);
+const geologia = tema("geologia", "Geologia (IBGE)", "geologia_ibge.geojson", 5, "#C49A6C", 0.35, [
+  { property: "simbolo", label: "Símbolo" },
+  { property: "litologia", label: "Litologia" },
+  { property: "idade", label: "Idade" },
+  { property: "provincia", label: "Província" },
+], { classification: { property: "cor", classes: {
+  0: { fill: "#C49A6C", stroke: "#C49A6C" },
+  1: { fill: "#D35400", stroke: "#D35400" },
+} } });
+const geomorfologia = tema("geomorfologia", "Geomorfologia (IBGE)", "geomorfologia_ibge.geojson", 6, "#A9746E", 0.3, [
+  { property: "dominio", label: "Domínio" },
+  { property: "regiao", label: "Região" },
+  { property: "compartimento", label: "Compartimento" },
+  { property: "modelado", label: "Modelado" },
+]);
+const pedologia = tema("pedologia", "Solos (IBGE)", "pedologia_ibge.geojson", 7, "#C8743A", 0.3, [
+  { property: "textura", label: "Textura" },
+  { property: "horizonte", label: "Horizonte A" },
+  { property: "relevo", label: "Relevo" },
+]);
+const vegetacao = tema("vegetacao", "Vegetação (IBGE)", "vegetacao_ibge.geojson", 8, "#6AA84F", 0.3, [
+  { property: "uso_dominante", label: "Uso dominante" },
+  { property: "contato", label: "Vegetação original" },
+  { property: "secundaria", label: "Formações secundárias" },
+]);
+const drenagemAna = macro("drenagem-ana", "Rios (ANA)", "drainage", "drenagem_ana.geojson", 9,
+  { stroke: "#0B2A9E", strokeWidth: 3, zIndex: 14 },
+  { title: "Curso d'água (ANA)", fields: [
+    { property: "comprimento_km", label: "Comprimento do trecho", decimals: 2, suffix: " km" },
+    { property: "area_bacia_km2", label: "Área da bacia", decimals: 2, suffix: " km²" },
+  ] });
+const reservatorio = macro("reservatorio", "Reservatório (ANA)", "vector", "reservatorio_ana.geojson", 10,
+  { stroke: "#0B2A9E", strokeWidth: 1.5, fill: "#1E88E5", fillOpacity: 0.6, zIndex: 15 },
+  { titleProperty: "nome", fields: [
+    { property: "uso", label: "Uso" },
+    { property: "empreendedor", label: "Empreendedor" },
+    { property: "area_ha", label: "Área", decimals: 2, suffix: " ha" },
+  ] });
+const drenagemMacro = macro("drenagem-macro", "Drenagem Simulada (bacia)", "drainage", "simu_drenagem.geojson", 11,
+  { stroke: "#00E5FF", strokeWidth: 1, zIndex: 10,
+    classification: { property: "STRAHLER", classes: {
+      1: { stroke: "#00E5FF", strokeWidth: 1, zIndex: 10 },
+      2: { stroke: "#14B8F0", strokeWidth: 1.6, zIndex: 11 },
+      3: { stroke: "#1E88E5", strokeWidth: 2.4, zIndex: 12 },
+      4: { stroke: "#1546D8", strokeWidth: 3.4, zIndex: 13 },
+      5: { stroke: "#0B2A9E", strokeWidth: 4.4, zIndex: 13 },
+      6: { stroke: "#061A6B", strokeWidth: 5.4, zIndex: 13 },
+    } } },
+  { title: "Drenagem", fields: [
+    { property: "STRAHLER", label: "Ordem de Strahler", format: "integer" },
+    { property: "area_contribuicao_ha", label: "Área de contribuição", decimals: 2, suffix: " ha" },
+  ] });
+const microbaciasMacro = macro("microbacias-macro", "Microbacias Simuladas (bacia)", "vector", "simu_microbacias.geojson", 12,
+  microbaciasStyle,
+  areaPerimetroPopup("nome"), { opacityControl: true });
+const curvas10 = macro("curvas10", "Curvas de Nível (10 m, bacia)", "contours", "curvas_10m.geojson", 13,
+  { stroke: "#000000", strokeWidth: 1, zIndex: 5 },
+  { title: "Curva de nível", fields: [{ property: "cota_m", label: "Cota", suffix: " m", format: "integer" }] });
 
 // Modelo 3D do ion (Agisoft Metashape). VITE_CESIUM_3D_TOKEN é igual ao token
 // do ion neste projeto, então reaproveita VITE_CESIUM_ION_TOKEN.
@@ -131,7 +232,9 @@ export const project: ProjectConfig = {
   // Ordem = empilhamento: o último item fica por cima.
   // Sem análise temporal: um único ortomosaico, sem temporalCampaign nas camadas
   // e sem temporalComparison (régua, selo de período e "Comparar" ficam ocultos).
-  layers: [basemap, orto, mds, mdt, declividade, aspecto, microbacias, curvas3, curvas5, drenagem, imoveis, modelo],
+  layers: [basemap, orto, mds, mdt, declividade, aspecto,
+    clima, geologia, geomorfologia, pedologia, vegetacao, ucfed, microbacias, microbaciasMacro, curvas3, curvas5, curvas10,
+    drenagem, drenagemMacro, drenagemAna, reservatorio, ottobacia, municipios, imoveis, modelo],
   scenes: [],
   diagnostic: { steps: [] },
   // Ferramentas só aparecem em npm run dev; desligadas, o dev fica igual ao site publicado.
