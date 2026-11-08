@@ -17,6 +17,15 @@ const orto: Layer = {
     bounds: [-45.5273, -22.5937, -45.1758, -22.4313], minimumLevel: 11, maximumLevel: 20, tileWidth: 256, tileHeight: 256 },
 };
 
+// Relevo regional: seção Análise Macro (primeiro item), fora dos grupos exclusivos.
+// No mapa fica acima do ortomosaico e abaixo dos rasters do drone.
+const demMacro: Layer = {
+  id: "dem-macro", name: "Relevo Regional (DEM)", description: "", kind: "dtm", defaultVisible: false,
+  group: "macro", panelOrder: 0, legendMode: "embedded", opacityControl: true,
+  source: { format: "tms", url: `${R2}/dem_macro/{z}/{x}/{reverseY}.png`, credit: "Cardeal Map",
+    bounds: [-67.5000, -40.9799, -45.0000, -21.9430], minimumLevel: 4, maximumLevel: 13, tileWidth: 256, tileHeight: 256 },
+};
+
 // Derivados do relevo: legenda no próprio raster, um por vez (mesmo exclusiveGroup).
 const derivado = (id: string, name: string, kind: Layer["kind"], folder: string, bounds: Bounds, minimumLevel: number, maximumLevel: number): Layer => ({
   id, name, description: "", kind, defaultVisible: false,
@@ -232,7 +241,7 @@ export const project: ProjectConfig = {
   // Ordem = empilhamento: o último item fica por cima.
   // Sem análise temporal: um único ortomosaico, sem temporalCampaign nas camadas
   // e sem temporalComparison (régua, selo de período e "Comparar" ficam ocultos).
-  layers: [basemap, orto, mds, mdt, declividade, aspecto,
+  layers: [basemap, orto, demMacro, mds, mdt, declividade, aspecto,
     clima, geologia, geomorfologia, pedologia, vegetacao, ucfed, microbacias, microbaciasMacro, curvas3, curvas5, curvas10,
     drenagem, drenagemMacro, drenagemAna, reservatorio, ottobacia, municipios, imoveis, modelo],
   scenes: [],
