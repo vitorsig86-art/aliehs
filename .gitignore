@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.local
+*.tsbuildinfo
+.npm-cache/
+.verification/
+.vite/
+.codex/
+
+# Claude Code local permissions
+.claude/settings.local.json
