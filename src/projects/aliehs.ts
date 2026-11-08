@@ -31,6 +31,17 @@ const mdt = derivado("mdt", "Modelo Digital de Terreno", "dtm", "mdt", boundsNiv
 const declividade = derivado("declividade", "Declividade (IBGE)", "slope", "decli", boundsNivel9, 9, 18);
 const aspecto = derivado("aspecto", "Orientação de Vertentes", "aspect", "aspect", boundsNivel8, 8, 17);
 
+// Modelo 3D do ion (Agisoft Metashape). VITE_CESIUM_3D_TOKEN é igual ao token
+// do ion neste projeto, então reaproveita VITE_CESIUM_ION_TOKEN.
+const modelo: Layer = {
+  id: "modelo", name: "Modelo 3D", description: "", kind: "3d-tiles", defaultVisible: false,
+  source: { format: "3d-tiles", source: "ion", assetId: 6134002, tokenEnv: "VITE_CESIUM_ION_TOKEN",
+    // Provisório: conferir com modelAlignment e registrar aqui a referência de
+    // altura usada no upload do ion (elipsoidal, ortométrica ou ajuste no ion).
+    heightOffsetMeters: 0,
+    terrainCutout: false },
+};
+
 export const project: ProjectConfig = {
   ...templateProject,
   id: "aliehs",
@@ -46,10 +57,10 @@ export const project: ProjectConfig = {
   // Ordem = empilhamento: o último item fica por cima.
   // Sem análise temporal: um único ortomosaico, sem temporalCampaign nas camadas
   // e sem temporalComparison (régua, selo de período e "Comparar" ficam ocultos).
-  layers: [basemap, orto, mds, mdt, declividade, aspecto],
+  layers: [basemap, orto, mds, mdt, declividade, aspecto, modelo],
   scenes: [],
   diagnostic: { steps: [] },
-  // Ferramentas só aparecem em npm run dev. modelAlignment e cropAuthoring ligados
-  // para o recorte do modelo 3D; desligue os dois ao finalizar (etapa 9).
-  developmentTools: { modelAlignment: true, cropAuthoring: true, cameraCapture: false },
+  // Ferramentas só aparecem em npm run dev. Ligadas para alinhar e recortar o modelo 3D;
+  // desligue todas ao finalizar (etapa 9).
+  developmentTools: { modelAlignment: true, cropAuthoring: true, cameraCapture: true },
 };
