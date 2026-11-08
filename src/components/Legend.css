@@ -18,6 +18,14 @@
 .raster-legend.raster-legend-image { width: auto; max-width: 160px; padding: 8px; }
 .raster-legend-image img { display: block; max-width: 100%; height: auto; border-radius: var(--radius-sm); }
 
+/* Desktop: image legends up to 220px wide, never stretched past the PNG's natural
+   size. A fixed cap instead of max-width: 100% lets the auto-width card size itself
+   to the image; the card cap (220px + padding) makes long titles wrap. */
+@media (min-width: 761px) {
+  .raster-legend.raster-legend-image { max-width: calc(220px + 16px); }
+  .raster-legend-image img { max-width: 220px; }
+}
+
 .raster-legend.raster-legend-missing { width: 200px; }
 .raster-legend-missing p { margin: 0; color: var(--color-neutral-700); font-size: 12px; line-height: 1.4; }
 

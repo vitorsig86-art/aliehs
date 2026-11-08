@@ -2,6 +2,11 @@
 
 Mudanças do Cardeal Map template, da mais recente para a mais antiga. Projetos derivados registram suas próprias mudanças a partir do commit de origem anotado no AGENTS.md do clone.
 
+## [Aliehs] — mudanças do projeto derivado (origem: template 7e32817)
+
+### Para portar ao template
+- `src/components/Legend.css`: no desktop (`min-width: 761px`), legendas em imagem aparecem com até 220 px de largura, sem esticar além do tamanho natural do PNG (cartão com `max-width: calc(220px + 16px)`, imagem com `max-width: 220px`). Antes, com o cartão de largura automática e a imagem em `max-width: 100%` (porcentagem do próprio cartão), a imagem encolhia até a largura do título (cerca de 90 px na declividade do IBGE). Celular sem mudança.
+
 ## [Não lançado] — Popups Macro de Andrelândia/EFAC e painel fechado no celular
 
 ### Adicionado
